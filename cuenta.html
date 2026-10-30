@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu cuenta de GoClips</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="logo.png">
+<style>
+  :root {
+    --bg: #f6f6f8; --card: #ffffff; --text: #16161d; --muted: #6b6b78;
+    --line: #e4e4ea; --accent: #5b4bff; --accent-text: #ffffff; --error: #c62f3c; --ok: #1f8a4c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101015; --card: #1a1a22; --text: #f2f2f6; --muted: #9a9aab;
+      --line: #2c2c38; --accent: #7a6cff; --accent-text: #ffffff; --error: #ff6b78; --ok: #4ccf86;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: var(--bg); color: var(--text); padding: 24px 16px;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 20px; padding: 36px 28px; text-align: center;
+  }
+  img { width: 64px; height: 64px; border-radius: 14px; }
+  h1 { font-size: 22px; margin: 14px 0 6px; }
+  p { color: var(--muted); margin: 0 0 20px; }
+  form { text-align: left; }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  input {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-size: 16px;
+  }
+  button {
+    width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 12px;
+    background: var(--accent); color: var(--accent-text); font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  .msg { margin-top: 14px; font-size: 14px; min-height: 21px; text-align: center; }
+  .msg.error { color: var(--error); }
+  .msg.ok { color: var(--ok); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img src="logo.png" alt="">
+  <h1 id="titulo">Tu cuenta de GoClips</h1>
+  <p id="texto">Abrí esta página desde el link del mail que te mandamos.</p>
+
+  <form id="form" hidden>
+    <label for="clave">Contraseña nueva</label>
+    <input id="clave" type="password" autocomplete="new-password" minlength="6" required>
+    <label for="clave2">Repetila</label>
+    <input id="clave2" type="password" autocomplete="new-password" minlength="6" required>
+    <button id="guardar" type="submit">Guardar contraseña</button>
+  </form>
+  <div id="msg" class="msg"></div>
+</main>
+
+<script>
+// Supabase manda acá los links de los mails de cuenta (confirmación y recuperación).
+// Los datos vienen después del # de la dirección, por ejemplo #access_token=...&type=recovery
+const SB_URL = 'https://rxubxumcabxbcichujab.supabase.co';
+const SB_KEY = 'sb_publishable_iyxr9HVE_DGdOo-BKai1dg_qRI4uYGx';
+
+const datos = new URLSearchParams(location.hash.slice(1));
+history.replaceState(null, '', location.pathname); // saca el token de la barra de direcciones
+const $ = id => document.getElementById(id);
+const mostrar = (titulo, texto) => { $('titulo').textContent = titulo; $('texto').textContent = texto; };
+const aviso = (t, clase) => { $('msg').textContent = t; $('msg').className = 'msg ' + (clase || ''); };
+
+if (datos.get('error')) {
+  const vencido = /expired/i.test(datos.get('error_code') || datos.get('error_description') || '');
+  mostrar('El link no funcionó', vencido
+    ? 'El link venció o ya se usó. Pedí uno nuevo y abrilo apenas te llegue.'
+    : (datos.get('error_description') || 'Pedí un link nuevo.'));
+} else if (datos.get('type') === 'recovery' && datos.get('access_token')) {
+  mostrar('Elegí tu contraseña nueva', 'Después entrá a GoClips con tu mail y esta contraseña.');
+  $('form').hidden = false;
+  $('clave').focus();
+} else if (['signup', 'email', 'invite', 'magiclink'].includes(datos.get('type'))) {
+  mostrar('¡Listo, tu mail está confirmado!', 'Volvé a GoClips e iniciá sesión con tu mail y tu contraseña.');
+}
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const clave = $('clave').value;
+  if (clave.length < 6) return aviso('Usá al menos 6 caracteres.', 'error');
+  if (clave !== $('clave2').value) return aviso('Las dos contraseñas no coinciden.', 'error');
+  $('guardar').disabled = true;
+  aviso('Guardando…');
+  try {
+    const r = await fetch(SB_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + datos.get('access_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: clave }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.msg || j.message || j.error_description || 'No se pudo guardar.');
+    $('form').hidden = true;
+    mostrar('¡Contraseña guardada!', 'Ya podés cerrar esta página. Abrí GoClips e iniciá sesión con tu mail y tu contraseña nueva.');
+    aviso('');
+  } catch (err) {
+    $('guardar').disabled = false;
+    aviso(/same|different/i.test(err.message) ? 'Elegí una contraseña distinta a la anterior.' : err.message, 'error');
+  }
+});
+</script>
+</body>
+</html>
