@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descargar GoClips</title>
+<meta name="description" content="Descargá GoClips, el generador de anuncios en video con IA, para Windows y Mac.">
+<link rel="icon" href="logo.png">
+<style>
+  :root {
+    --bg: #f6f6f8; --card: #ffffff; --text: #16161d; --muted: #6b6b78;
+    --line: #e4e4ea; --accent: #5b4bff; --accent-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101015; --card: #1a1a22; --text: #f2f2f6; --muted: #9a9aab;
+      --line: #2c2c38; --accent: #7a6cff; --accent-text: #ffffff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: var(--bg); color: var(--text); padding: 24px 16px;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 20px; padding: 36px 28px; text-align: center;
+  }
+  img { width: 80px; height: 80px; border-radius: 18px; }
+  h1 { font-size: 28px; margin: 16px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .btn {
+    display: block; width: 100%; padding: 15px 20px; border-radius: 12px; border: 0;
+    background: var(--accent); color: var(--accent-text); font-size: 17px; font-weight: 600;
+    text-decoration: none;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn[aria-disabled="true"] { opacity: .6; pointer-events: none; }
+  .version { color: var(--muted); font-size: 14px; margin: 10px 0 0; min-height: 21px; }
+  .otros { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .otros a { color: var(--text); }
+  .otros ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  .otros li { margin: 4px 0; }
+  .ayuda { text-align: left; font-size: 14px; color: var(--muted); margin-top: 20px; }
+  .ayuda b { color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <img src="logo.png" alt="">
+  <h1>GoClips</h1>
+  <p class="sub">Anuncios en video con IA</p>
+
+  <a id="principal" class="btn" href="https://github.com/goclipstech/GoClips-descargas/releases/latest" aria-disabled="true">Buscando la última versión…</a>
+  <p id="version" class="version"></p>
+
+  <div id="ayuda" class="ayuda"></div>
+
+  <div class="otros">
+    ¿Otra computadora?
+    <ul>
+      <li><a id="win" href="https://github.com/goclipstech/GoClips-descargas/releases/latest">Windows</a></li>
+      <li><a id="arm" href="https://github.com/goclipstech/GoClips-descargas/releases/latest">Mac con chip Apple (M1, M2, M3, M4)</a></li>
+      <li><a id="intel" href="https://github.com/goclipstech/GoClips-descargas/releases/latest">Mac con Intel</a></li>
+    </ul>
+  </div>
+</main>
+
+<script>
+// Le pregunta a GitHub cuál es la última versión y arma los links a sus instaladores.
+// Si GitHub no responde, todos los links quedan apuntando a la página de la última versión.
+const REPO = 'goclipstech/GoClips-descargas';
+const ua = navigator.userAgent;
+const esWindows = /Windows/i.test(ua);
+const esMac = /Macintosh|Mac OS X/i.test(ua) && !/iPhone|iPad/i.test(ua);
+
+const AYUDA = {
+  win: '<b>Al abrirlo:</b> si aparece "Windows protegió su PC", tocá <i>Más información</i> → <i>Ejecutar de todas formas</i>.',
+  mac: '<b>Al abrirlo:</b> arrastrá GoClips a Aplicaciones. La primera vez, clic derecho sobre GoClips → <i>Abrir</i> → <i>Abrir</i>.',
+};
+
+// Chrome y Edge pueden decir si la Mac es Apple o Intel; Safari no, y ahí se asume chip Apple.
+async function macEsIntel() {
+  try {
+    const d = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+    return d.architecture === 'x86';
+  } catch { return false; }
+}
+
+async function iniciar() {
+  const principal = document.getElementById('principal');
+  let r;
+  try {
+    r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`).then(x => x.json());
+  } catch { r = null; }
+  const assets = (r && r.assets) || [];
+  const buscar = re => (assets.find(a => re.test(a.name)) || {}).browser_download_url;
+  const links = {
+    win: buscar(/\.exe$/i),
+    arm: buscar(/arm64\.dmg$/i),
+    intel: buscar(/x64\.dmg$/i),
+  };
+  for (const k in links) if (links[k]) document.getElementById(k).href = links[k];
+  if (r && r.tag_name) document.getElementById('version').textContent = 'Versión ' + r.tag_name.replace(/^v/, '');
+
+  let elegido = null, texto = 'Ver todas las descargas', ayuda = '';
+  if (esWindows && links.win) {
+    elegido = links.win; texto = 'Descargar para Windows'; ayuda = AYUDA.win;
+  } else if (esMac) {
+    const intel = await macEsIntel();
+    elegido = intel ? links.intel : links.arm;
+    texto = intel ? 'Descargar para Mac (Intel)' : 'Descargar para Mac';
+    ayuda = AYUDA.mac;
+  }
+  if (elegido) principal.href = elegido; else texto = 'Ver todas las descargas';
+  principal.textContent = texto;
+  principal.removeAttribute('aria-disabled');
+  document.getElementById('ayuda').innerHTML = ayuda;
+}
+iniciar();
+</script>
+</body>
+</html>
