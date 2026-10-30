@@ -8,13 +8,13 @@
 <link rel="icon" href="logo.png">
 <style>
   :root {
-    --bg: #f6f6f8; --card: #ffffff; --text: #16161d; --muted: #6b6b78;
-    --line: #e4e4ea; --accent: #5b4bff; --accent-text: #ffffff; --error: #c62f3c; --ok: #1f8a4c;
+    --bg: #F3F7FF; --card: #ffffff; --text: #0B1640; --muted: #5A6788;
+    --line: rgba(11,22,64,.10); --accent: #1F6BEA; --a1: #12CFF3; --a2: #1446D8; --accent-text: #ffffff; --error: #c62f3c; --ok: #1f8a4c;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #101015; --card: #1a1a22; --text: #f2f2f6; --muted: #9a9aab;
-      --line: #2c2c38; --accent: #7a6cff; --accent-text: #ffffff; --error: #ff6b78; --ok: #4ccf86;
+      --bg: #050B1F; --card: #0C1634; --text: #EAF1FF; --muted: #8FA0C7;
+      --line: rgba(120,160,255,.13); --accent: #3D8BFF; --a1: #18D7F5; --a2: #2B6BFF; --accent-text: #ffffff; --error: #ff6b78; --ok: #4ccf86;
     }
   }
   * { box-sizing: border-box; }
@@ -38,7 +38,7 @@
   }
   button {
     width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 12px;
-    background: var(--accent); color: var(--accent-text); font-size: 16px; font-weight: 600; cursor: pointer;
+    background: linear-gradient(90deg, var(--a1), var(--a2)); color: var(--accent-text); font-size: 16px; font-weight: 600; cursor: pointer;
   }
   button:disabled { opacity: .6; cursor: default; }
   .msg { margin-top: 14px; font-size: 14px; min-height: 21px; text-align: center; }
